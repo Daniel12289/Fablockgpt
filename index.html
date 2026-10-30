@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://fablockgpt.floot.app; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="theme-color" content="#070a14">
+<title>FABLOCK AI BUILDER PRO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Sign in -->
+<div id="auth" class="auth" hidden>
+  <form id="authForm" class="auth-card" autocomplete="on">
+    <div class="logo-mark" aria-hidden="true"></div>
+    <h1>FABLOCK AI BUILDER PRO</h1>
+    <p class="muted">Sign in to start building. Accounts are created by the owner.</p>
+    <label>Email<input id="authEmail" type="email" autocomplete="username" required></label>
+    <label>Password<input id="authPass" type="password" autocomplete="current-password" required></label>
+    <div id="authErr" class="err" role="alert"></div>
+    <button class="btn primary" id="authBtn" type="submit">Sign in</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header class="top">
+    <div class="brand"><span class="logo-mark sm" aria-hidden="true"></span><b>FABLOCK</b><span class="brand-sub">AI BUILDER PRO</span></div>
+    <button class="proj-name" id="projName" title="Project settings"></button>
+    <div class="top-actions">
+      <button class="btn ghost" id="btnProjects">Projects</button>
+      <button class="btn ghost" id="btnSave"><span id="saveDot" class="dot" hidden></span>Save</button>
+      <button class="btn ghost" id="btnExport">Export ZIP</button>
+      <button class="btn ghost" id="btnSettings" aria-label="Settings">Settings</button>
+    </div>
+  </header>
+
+  <main class="work" id="work" data-view="chat">
+    <!-- AI chat -->
+    <section class="panel chat" id="pChat" aria-label="AI chat">
+      <div class="chat-log" id="chatLog" aria-live="polite"></div>
+      <div class="gen-status" id="genStatus" hidden>
+        <div class="steps" id="steps"></div>
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="stat-line"><span id="stageText">Idle</span><span id="stageMeta" class="muted"></span></div>
+      </div>
+      <div class="composer">
+        <div class="seg" role="group" aria-label="Mode">
+          <button id="modeNew" class="on" type="button">New project</button>
+          <button id="modeEdit" type="button">Modify existing</button>
+        </div>
+        <textarea id="prompt" rows="3" placeholder="Describe what to build or change…  (Ctrl+Enter to send)"></textarea>
+        <div class="composer-row">
+          <button class="btn primary grow" id="btnGen">Generate Project</button>
+          <button class="btn danger" id="btnStop" hidden>Stop</button>
+          <button class="btn" id="btnPause" hidden>Pause</button>
+        </div>
+        <div class="composer-row small">
+          <button class="btn ghost" id="btnClear">Clear Prompt</button>
+          <button class="btn ghost" id="btnRegen" disabled>Regenerate Code</button>
+          <button class="btn ghost" id="btnRevert" disabled>Revert last</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Files + editor -->
+    <section class="panel code" id="pCode" aria-label="Code">
+      <aside class="files" id="files">
+        <div class="files-head">
+          <b>FILES</b>
+          <span>
+            <button class="icon" id="btnNewFile" title="New file">+ File</button>
+            <button class="icon" id="btnNewFolder" title="New folder">+ Folder</button>
+          </span>
+        </div>
+        <div class="tree" id="tree"></div>
+      </aside>
+      <div class="editor-col">
+        <div class="editor-bar">
+          <button class="icon" id="btnFiles" title="Show or hide files">Files</button>
+          <div class="tabs-strip" id="tabsStrip"></div>
+        </div>
+        <div class="editor-tools">
+          <button class="icon" id="btnUndo">Undo</button>
+          <button class="icon" id="btnRedo">Redo</button>
+          <button class="icon" id="btnFind">Find</button>
+          <button class="icon" id="btnReplace">Replace</button>
+          <button class="icon" id="btnCopy">Copy</button>
+          <button class="icon" id="btnDownload">Download file</button>
+          <span class="cursor-pos" id="cursorPos">Ln 1, Col 1</span>
+        </div>
+        <div class="editor-host" id="editorHost"></div>
+        <div class="empty" id="editorEmpty">No file open. Generate a project or create a file.</div>
+      </div>
+    </section>
+
+    <!-- Preview -->
+    <section class="panel prev" id="pPrev" aria-label="Preview">
+      <div class="prev-bar">
+        <div class="seg" role="group" aria-label="Device">
+          <button data-dev="phone" class="on">Phone</button>
+          <button data-dev="tablet">Tablet</button>
+          <button data-dev="desktop">Desktop</button>
+        </div>
+        <button class="icon" id="btnRefresh">Refresh</button>
+        <button class="icon" id="btnNewTab">New tab</button>
+        <button class="icon" id="btnFull">Fullscreen</button>
+        <button class="icon" id="btnReload">Reload app</button>
+      </div>
+      <div class="err-strip" id="errStrip" hidden>
+        <span id="errText"></span>
+        <button class="btn sm danger" id="btnFix">Fix errors with AI</button>
+      </div>
+      <div class="stage" id="stage">
+        <div class="device phone" id="device">
+          <div class="notch"></div>
+          <iframe id="frame" title="Live preview" sandbox="allow-scripts allow-forms allow-modals allow-popups" referrerpolicy="no-referrer"></iframe>
+          <div class="prev-empty" id="prevEmpty">The live preview appears here as soon as index.html has content.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-view="chat" class="on">AI Chat</button>
+    <button data-view="code">Code</button>
+    <button data-view="prev">Preview</button>
+  </nav>
+</div>
+
+<div id="modal" class="modal" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closetag.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/xml-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/html-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/css-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

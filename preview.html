@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FABLOCK Preview</title>
+<style id="fabcss"></style>
+<style>html,body{margin:0}#fab-hold{font:14px/1.5 system-ui,sans-serif;color:#8b93b8;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:24px;box-sizing:border-box}</style>
+</head>
+<body><div id="fab-hold">Preview runtime ready. Waiting for code…</div>
+<script>
+/* Preview runtime. This page is loaded inside a sandboxed iframe (no same-origin access)
+   and the server also sends "Content-Security-Policy: sandbox" for it, so generated code
+   can never touch the builder app, its storage or the user's session. */
+(function () {
+  var ctx = window.opener || window.parent;
+  function post(m) { m.fab = 1; try { ctx.postMessage(m, "*"); } catch (e) {} }
+  var lastBody = null, ext = {};
+
+  function applyLive(d) {
+    try {
+      var doc = new DOMParser().parseFromString(d.html || "", "text/html");
+      var b = doc.body;
+      var links = doc.querySelectorAll("link[rel~=stylesheet]");
+      for (var i = 0; i < links.length; i++) {
+        var h = links[i].getAttribute("href");
+        if (h && /^(https?:)?\/\//.test(h) && !ext[h]) {
+          ext[h] = 1;
+          var n = document.createElement("link"); n.rel = "stylesheet"; n.href = h; document.head.appendChild(n);
+        }
+      }
+      var css = d.css || "";
+      var st = doc.head.querySelectorAll("style");
+      for (var j = 0; j < st.length; j++) css += "\n" + st[j].textContent;
+      var cur = document.getElementById("fabcss");
+      if (cur.textContent !== css) cur.textContent = css;
+      var sc = b.querySelectorAll("script");
+      for (var k = 0; k < sc.length; k++) sc[k].remove();
+      var html = b.innerHTML;
+      if (html !== lastBody) {
+        lastBody = html;
+        document.body.innerHTML = html;
+        document.body.className = b.className;
+        document.body.setAttribute("style", b.getAttribute("style") || "");
+      }
+      post({ type: "live-applied" });
+    } catch (err) {
+      post({ type: "preview-error", message: String(err && err.message || err) });
+    }
+  }
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== ctx) return;
+    var d = e.data;
+    if (!d || d.fab !== 1) return;
+    if (d.type === "live") applyLive(d);
+    else if (d.type === "final") {
+      document.open();
+      document.write(d.html);
+      document.close();
+    }
+  });
+  post({ type: "ready" });
+})();
+</script>
+</body>
+</html>
